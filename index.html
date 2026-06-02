@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Image Composer</title>
+<title>Image Combiner for Reports</title>
 <style>
   :root {
     --bg: #0a0a0a;
@@ -28,7 +28,7 @@
   }
   header { text-align: center; margin-bottom: 36px; width: 100%; }
   .logo { font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; opacity: 0.8; }
-  h1 { font-size: clamp(26px, 7vw, 40px); font-weight: 700; letter-spacing: -0.03em; }
+  h1 { font-size: clamp(22px, 6vw, 34px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.2; }
   h1 span { color: var(--accent); }
   .subtitle { margin-top: 8px; font-size: 13px; color: var(--muted); }
   .mode-wrap { display: flex; gap: 12px; margin-bottom: 24px; width: 100%; max-width: 480px; }
@@ -57,7 +57,7 @@
   .status.ok { color: var(--success); }
   .status.err { color: var(--accent2); }
   .status.processing { color: var(--accent); }
-  .compose-btn {
+  .combine-btn {
     width: 100%; max-width: 480px; padding: 18px; background: var(--accent);
     color: #000; font-size: 16px; font-weight: 700; font-family: inherit;
     border: none; border-radius: 14px; cursor: pointer; margin-bottom: 16px;
@@ -70,11 +70,12 @@
   }
   .result-preview img { width: 100%; display: block; }
   .result-info { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 16px; }
-  .save-btn {
+  .download-btn {
     width: 100%; padding: 18px; background: transparent; color: var(--success);
     font-size: 16px; font-weight: 700; font-family: inherit;
     border: 1.5px solid var(--success); border-radius: 14px; cursor: pointer;
     margin-bottom: 12px; -webkit-tap-highlight-color: transparent;
+    text-decoration: none; display: block; text-align: center;
   }
   .reset-btn {
     width: 100%; padding: 14px; background: transparent; color: var(--muted);
@@ -88,8 +89,8 @@
 
 <header>
   <div class="logo">JTBC News Design</div>
-  <h1>Image <span>Composer</span></h1>
-  <p class="subtitle">Center Crop · 가로 합성</p>
+  <h1>Image Combiner<br><span>for Reports</span></h1>
+  <p class="subtitle">Center Crop · 가로 결합</p>
 </header>
 
 <div class="mode-wrap">
@@ -111,23 +112,22 @@
 
 <div class="thumb-list" id="thumbList"></div>
 <div class="status" id="status"></div>
-<button class="compose-btn" id="composeBtn" onclick="compose()">합성하기</button>
+<button class="combine-btn" id="combineBtn" onclick="combine()">결합하기</button>
 
 <div class="result-wrap" id="resultWrap">
   <div class="result-preview">
     <img id="resultImg" src="" alt="결과">
   </div>
   <div class="result-info" id="resultInfo"></div>
-  <button class="save-btn" onclick="savePNG()">📥 사진 앨범에 저장</button>
+  <a id="downloadBtn" class="download-btn" download="combined.png">📥 이미지 다운로드</a>
   <button class="reset-btn" onclick="reset()">다시 선택</button>
 </div>
 
 <script>
-let currentMode = 3;
-let selectedFiles = [];
-let resultDataURL = null;
+var currentMode = 3;
+var selectedFiles = [];
 
-const SPECS = {
+var SPECS = {
   3: { canvasW: 1890, canvasH: 350, thumbW: 622, thumbH: 350, gap: 12 },
   4: { canvasW: 1890, canvasH: 262, thumbW: 465, thumbH: 262, gap: 10 }
 };
@@ -138,10 +138,9 @@ function setMode(n) {
   document.getElementById('mode4').classList.toggle('active', n === 4);
   document.getElementById('pickSub').textContent = n + '개 선택해주세요';
   selectedFiles = [];
-  resultDataURL = null;
   renderThumbs([]);
   setStatus('');
-  document.getElementById('composeBtn').style.display = 'none';
+  document.getElementById('combineBtn').style.display = 'none';
   document.getElementById('resultWrap').style.display = 'none';
   document.getElementById('fileInput').value = '';
 }
@@ -152,13 +151,13 @@ function handleFiles(files) {
     setStatus(currentMode + '개를 선택해야 합니다 (현재 ' + arr.length + '개)', 'err');
     selectedFiles = [];
     renderThumbs([]);
-    document.getElementById('composeBtn').style.display = 'none';
+    document.getElementById('combineBtn').style.display = 'none';
     return;
   }
   selectedFiles = arr;
   renderThumbs(arr);
-  setStatus(arr.length + '개 선택됨 · 합성 준비 완료', 'ok');
-  document.getElementById('composeBtn').style.display = 'block';
+  setStatus(arr.length + '개 선택됨 · 결합 준비 완료', 'ok');
+  document.getElementById('combineBtn').style.display = 'block';
   document.getElementById('resultWrap').style.display = 'none';
 }
 
@@ -185,11 +184,11 @@ function setStatus(msg, type) {
   el.className = 'status ' + (type || '');
 }
 
-function compose() {
+function combine() {
   if (selectedFiles.length !== currentMode) return;
   var spec = SPECS[currentMode];
   setStatus('처리 중...', 'processing');
-  document.getElementById('composeBtn').style.display = 'none';
+  document.getElementById('combineBtn').style.display = 'none';
 
   var loaded = 0;
   var imgs = new Array(currentMode);
@@ -234,38 +233,41 @@ function drawAll(imgs, spec) {
   });
 
   try {
-    resultDataURL = canvas.toDataURL('image/png');
-    document.getElementById('resultImg').src = resultDataURL;
+    var dataURL = canvas.toDataURL('image/png');
+    document.getElementById('resultImg').src = dataURL;
     document.getElementById('resultInfo').textContent =
       spec.canvasW + '×' + spec.canvasH + 'px · PNG · 간격 ' + spec.gap + 'px';
+
+    // 다운로드 링크에 직접 href 설정
+    var ts = new Date();
+    var fname = 'combined_' +
+      ts.getFullYear() +
+      String(ts.getMonth()+1).padStart(2,'0') +
+      String(ts.getDate()).padStart(2,'0') + '_' +
+      String(ts.getHours()).padStart(2,'0') +
+      String(ts.getMinutes()).padStart(2,'0') +
+      String(ts.getSeconds()).padStart(2,'0') + '.png';
+
+    var btn = document.getElementById('downloadBtn');
+    btn.href = dataURL;
+    btn.download = fname;
+
     document.getElementById('resultWrap').style.display = 'block';
-    setStatus('합성 완료!', 'ok');
+    setStatus('결합 완료!', 'ok');
   } catch(e) {
     setStatus('오류: ' + e.message, 'err');
-    document.getElementById('composeBtn').style.display = 'block';
-  }
-}
-
-function savePNG() {
-  if (!resultDataURL) return;
-  // 단축어 웹뷰에서는 window.webkit.messageHandlers로 base64 전달
-  // 일반 Safari에서는 <a> 다운로드
-  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.saveImage) {
-    window.webkit.messageHandlers.saveImage.postMessage(resultDataURL);
-  } else {
-    // 웹뷰 내 단축어 환경: location.href로 base64 전달
-    window.location.href = resultDataURL;
+    document.getElementById('combineBtn').style.display = 'block';
   }
 }
 
 function reset() {
   selectedFiles = [];
-  resultDataURL = null;
   renderThumbs([]);
   setStatus('');
-  document.getElementById('composeBtn').style.display = 'none';
+  document.getElementById('combineBtn').style.display = 'none';
   document.getElementById('resultWrap').style.display = 'none';
   document.getElementById('fileInput').value = '';
+  document.getElementById('downloadBtn').href = '';
 }
 </script>
 </body>
