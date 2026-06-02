@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Image Composer</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --border: #2a2a2a;
+    --accent: #00e5ff;
+    --accent2: #ff3d71;
+    --text: #f0f0f0;
+    --muted: #555;
+    --success: #00e096;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+  }
+  header { text-align: center; margin-bottom: 36px; width: 100%; }
+  .logo { font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; opacity: 0.8; }
+  h1 { font-size: clamp(26px, 7vw, 40px); font-weight: 700; letter-spacing: -0.03em; }
+  h1 span { color: var(--accent); }
+  .subtitle { margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .mode-wrap { display: flex; gap: 12px; margin-bottom: 24px; width: 100%; max-width: 480px; }
+  .mode-btn {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px 12px; color: var(--muted);
+    font-size: 13px; font-family: inherit; cursor: pointer; text-align: center;
+    line-height: 1.4; -webkit-tap-highlight-color: transparent; user-select: none;
+  }
+  .mode-btn .count { display: block; font-size: 26px; font-weight: 700; color: var(--text); margin-bottom: 4px; letter-spacing: -0.04em; }
+  .mode-btn.active { border-color: var(--accent); background: rgba(0,229,255,0.06); color: var(--text); }
+  .mode-btn.active .count { color: var(--accent); }
+  .pick-btn {
+    width: 100%; max-width: 480px; padding: 20px;
+    background: var(--surface); border: 1.5px dashed var(--border);
+    border-radius: 20px; color: var(--text); font-size: 16px; font-weight: 600;
+    font-family: inherit; cursor: pointer; margin-bottom: 20px;
+    -webkit-tap-highlight-color: transparent; text-align: center;
+  }
+  .pick-btn .sub { display: block; font-size: 13px; color: var(--muted); font-weight: 400; margin-top: 4px; }
+  .thumb-list { display: flex; gap: 8px; width: 100%; max-width: 480px; margin-bottom: 16px; flex-wrap: wrap; }
+  .thumb-item { flex: 1; min-width: 80px; aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); position: relative; background: var(--surface); }
+  .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb-item .thumb-num { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.7); color: var(--accent); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+  .status { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 16px; min-height: 20px; }
+  .status.ok { color: var(--success); }
+  .status.err { color: var(--accent2); }
+  .status.processing { color: var(--accent); }
+  .compose-btn {
+    width: 100%; max-width: 480px; padding: 18px; background: var(--accent);
+    color: #000; font-size: 16px; font-weight: 700; font-family: inherit;
+    border: none; border-radius: 14px; cursor: pointer; margin-bottom: 16px;
+    display: none; -webkit-tap-highlight-color: transparent;
+  }
+  .result-wrap { width: 100%; max-width: 480px; display: none; }
+  .result-preview {
+    width: 100%; border-radius: 12px; border: 1px solid var(--border);
+    background: #fff; margin-bottom: 12px; overflow: hidden;
+  }
+  .result-preview img { width: 100%; display: block; }
+  .result-info { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 16px; }
+  .save-btn {
+    width: 100%; padding: 18px; background: transparent; color: var(--success);
+    font-size: 16px; font-weight: 700; font-family: inherit;
+    border: 1.5px solid var(--success); border-radius: 14px; cursor: pointer;
+    margin-bottom: 12px; -webkit-tap-highlight-color: transparent;
+  }
+  .reset-btn {
+    width: 100%; padding: 14px; background: transparent; color: var(--muted);
+    font-size: 14px; font-family: inherit; border: 1px solid var(--border);
+    border-radius: 14px; cursor: pointer;
+  }
+  #fileInput { position: fixed; top: -9999px; left: -9999px; opacity: 0; width: 1px; height: 1px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">JTBC News Design</div>
+  <h1>Image <span>Composer</span></h1>
+  <p class="subtitle">Center Crop · 가로 합성</p>
+</header>
+
+<div class="mode-wrap">
+  <div class="mode-btn active" id="mode3" onclick="setMode(3)">
+    <span class="count">3</span>
+    622×350 · gap 12px<br>→ 1890×350
+  </div>
+  <div class="mode-btn" id="mode4" onclick="setMode(4)">
+    <span class="count">4</span>
+    465×262 · gap 10px<br>→ 1890×262
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(this.files)">
+<button class="pick-btn" onclick="document.getElementById('fileInput').click()">
+  🖼️ 이미지 선택
+  <span class="sub" id="pickSub">3개 선택해주세요</span>
+</button>
+
+<div class="thumb-list" id="thumbList"></div>
+<div class="status" id="status"></div>
+<button class="compose-btn" id="composeBtn" onclick="compose()">합성하기</button>
+
+<div class="result-wrap" id="resultWrap">
+  <div class="result-preview">
+    <img id="resultImg" src="" alt="결과">
+  </div>
+  <div class="result-info" id="resultInfo"></div>
+  <button class="save-btn" onclick="savePNG()">📥 사진 앨범에 저장</button>
+  <button class="reset-btn" onclick="reset()">다시 선택</button>
+</div>
+
+<script>
+let currentMode = 3;
+let selectedFiles = [];
+let resultDataURL = null;
+
+const SPECS = {
+  3: { canvasW: 1890, canvasH: 350, thumbW: 622, thumbH: 350, gap: 12 },
+  4: { canvasW: 1890, canvasH: 262, thumbW: 465, thumbH: 262, gap: 10 }
+};
+
+function setMode(n) {
+  currentMode = n;
+  document.getElementById('mode3').classList.toggle('active', n === 3);
+  document.getElementById('mode4').classList.toggle('active', n === 4);
+  document.getElementById('pickSub').textContent = n + '개 선택해주세요';
+  selectedFiles = [];
+  resultDataURL = null;
+  renderThumbs([]);
+  setStatus('');
+  document.getElementById('composeBtn').style.display = 'none';
+  document.getElementById('resultWrap').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+}
+
+function handleFiles(files) {
+  var arr = Array.from(files);
+  if (arr.length !== currentMode) {
+    setStatus(currentMode + '개를 선택해야 합니다 (현재 ' + arr.length + '개)', 'err');
+    selectedFiles = [];
+    renderThumbs([]);
+    document.getElementById('composeBtn').style.display = 'none';
+    return;
+  }
+  selectedFiles = arr;
+  renderThumbs(arr);
+  setStatus(arr.length + '개 선택됨 · 합성 준비 완료', 'ok');
+  document.getElementById('composeBtn').style.display = 'block';
+  document.getElementById('resultWrap').style.display = 'none';
+}
+
+function renderThumbs(files) {
+  var list = document.getElementById('thumbList');
+  list.innerHTML = '';
+  files.forEach(function(f, i) {
+    var div = document.createElement('div');
+    div.className = 'thumb-item';
+    var num = document.createElement('div');
+    num.className = 'thumb-num';
+    num.textContent = i + 1;
+    var img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    div.appendChild(img);
+    div.appendChild(num);
+    list.appendChild(div);
+  });
+}
+
+function setStatus(msg, type) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status ' + (type || '');
+}
+
+function compose() {
+  if (selectedFiles.length !== currentMode) return;
+  var spec = SPECS[currentMode];
+  setStatus('처리 중...', 'processing');
+  document.getElementById('composeBtn').style.display = 'none';
+
+  var loaded = 0;
+  var imgs = new Array(currentMode);
+
+  selectedFiles.forEach(function(file, i) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        imgs[i] = img;
+        loaded++;
+        if (loaded === currentMode) drawAll(imgs, spec);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function drawAll(imgs, spec) {
+  var canvas = document.createElement('canvas');
+  canvas.width = spec.canvasW;
+  canvas.height = spec.canvasH;
+  var ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, spec.canvasW, spec.canvasH);
+
+  imgs.forEach(function(img, i) {
+    var x = i * (spec.thumbW + spec.gap);
+    var srcRatio = img.width / img.height;
+    var dstRatio = spec.thumbW / spec.thumbH;
+    var sx, sy, sw, sh;
+    if (srcRatio > dstRatio) {
+      sh = img.height; sw = img.height * dstRatio;
+      sx = (img.width - sw) / 2; sy = 0;
+    } else {
+      sw = img.width; sh = img.width / dstRatio;
+      sx = 0; sy = (img.height - sh) / 2;
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, x, 0, spec.thumbW, spec.thumbH);
+  });
+
+  try {
+    resultDataURL = canvas.toDataURL('image/png');
+    document.getElementById('resultImg').src = resultDataURL;
+    document.getElementById('resultInfo').textContent =
+      spec.canvasW + '×' + spec.canvasH + 'px · PNG · 간격 ' + spec.gap + 'px';
+    document.getElementById('resultWrap').style.display = 'block';
+    setStatus('합성 완료!', 'ok');
+  } catch(e) {
+    setStatus('오류: ' + e.message, 'err');
+    document.getElementById('composeBtn').style.display = 'block';
+  }
+}
+
+function savePNG() {
+  if (!resultDataURL) return;
+  // 단축어 웹뷰에서는 window.webkit.messageHandlers로 base64 전달
+  // 일반 Safari에서는 <a> 다운로드
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.saveImage) {
+    window.webkit.messageHandlers.saveImage.postMessage(resultDataURL);
+  } else {
+    // 웹뷰 내 단축어 환경: location.href로 base64 전달
+    window.location.href = resultDataURL;
+  }
+}
+
+function reset() {
+  selectedFiles = [];
+  resultDataURL = null;
+  renderThumbs([]);
+  setStatus('');
+  document.getElementById('composeBtn').style.display = 'none';
+  document.getElementById('resultWrap').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+}
+</script>
+</body>
+</html>
