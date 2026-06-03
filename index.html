@@ -216,8 +216,7 @@ function drawAll(imgs, spec) {
   canvas.height = spec.canvasH;
   var ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, spec.canvasW, spec.canvasH);
+  // 배경 투명 (gap = alpha)
 
   imgs.forEach(function(img, i) {
     var x = i * (spec.thumbW + spec.gap);
